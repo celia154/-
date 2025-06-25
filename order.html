@@ -105,7 +105,7 @@
       background: white;
       border-radius: 10px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      padding: 20px 0;
+      padding: 5px 10px;
     }
     .ranking-chart-container {
       flex: 1;
@@ -572,70 +572,91 @@ chartGoogleCompare.setOption({
       { name: "舒俊", value: 0 }, { name: "龚娅俪", value: 0 }
     ];
 
-    const allSales = Array.from(new Set([...aliClients.map(d => d.name), ...googleClients.map(d => d.name)]));
-    const aliMapClients = new Map(aliClients.map(d => [d.name, d.value]));
-    const googleMapClients = new Map(googleClients.map(d => [d.name, d.value]));
-    const aliDataClients = allSales.map(name => aliMapClients.get(name) || 0);
-    const googleDataClients = allSales.map(name => googleMapClients.get(name) || 0);
+    // 构建业务员-客户数映射
+const aliMapClients = new Map();
+aliClients.forEach(item => aliMapClients.set(item.name, item.value));
 
-    const chartRanking = echarts.init(document.getElementById('chartRanking'));
+const googleMapClients = new Map();
+googleClients.forEach(item => googleMapClients.set(item.name, item.value));
 
-    chartRanking.setOption({
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        formatter: function(params) {
-          let res = params[0].axisValue + '<br/>';
-          params.forEach(item => {
-            res += `${item.marker} ${item.seriesName}: ${item.value}<br/>`;
-          });
-          return res;
-        }
-      },
-      legend: {
-        data: ['阿里客户数', '谷歌客户数'],
-        bottom: 0
-      },
-      grid: {
-        left: '10%',
-        right: '5%',
-        bottom: '15%',
-        top: '10%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: allSales,
-        axisLabel: {
-          rotate: 30,
-          fontSize: 12
-        }
-      },
-      yAxis: {
-        type: 'value',
-        name: '客户数',
-        axisLabel: { fontSize: 12 }
-      },
-     series: [
-  {
-    name: '阿里客户数',
-    type: 'bar',
-    data: aliDataClients,
-    itemStyle: { color: '#5470C6' },
-    label: { show: true, position: 'top', fontSize: 11 },
-    barWidth: 16
+const allSales = Array.from(new Set([...aliClients.map(d => d.name), ...googleClients.map(d => d.name)]));
+
+const aliDataClients = allSales.map(name => aliMapClients.get(name) || 0);
+const googleDataClients = allSales.map(name => googleMapClients.get(name) || 0);
+
+const aliDataClientsFixed = fixZeroData(aliDataClients);
+const googleDataClientsFixed = fixZeroData(googleDataClients);
+
+// 渲染业务员客户数排名图表
+const chartRanking = echarts.init(document.getElementById('chartRanking'));
+chartRanking.setOption({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'shadow' },
+    formatter: function(params) {
+      let res = params[0].axisValue + '<br/>';
+      params.forEach(item => {
+        res += `${item.marker} ${item.seriesName}: ${item.value}<br/>`;
+      });
+      return res;
+    }
   },
-  {
-    name: '谷歌客户数',
-    type: 'bar',
-    data: googleDataClients,
-    itemStyle: { color: '#EE6666' },
-    label: { show: true, position: 'top', fontSize: 11 },
-    barWidth: 16
-  }
-],
-barCategoryGap: '40%'
-    });
+  legend: {
+    data: ['阿里客户数', '谷歌客户数'],
+    bottom: 0
+  },
+  grid: {
+    left: '3%',
+    right: '3%',
+    bottom: '10%',
+    top: '10%',
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    data: allSales,
+    axisLabel: {
+      rotate: 30,
+      fontSize: 12
+    }
+  },
+  yAxis: {
+    type: 'value',
+    name: '客户数',
+    axisLabel: { fontSize: 12 }
+  },
+  series: [
+    {
+      name: '阿里客户数',
+      type: 'bar',
+      data: aliDataClientsFixed,
+      label: {
+        formatter: p => p.value === 0.1 ? '0' : p.value,
+        show: true,
+        position: 'top',
+        fontSize: 11
+      },
+      barWidth: 16,
+      minBarHeight: 5,
+      itemStyle: { color: '#5470C6' }
+    },
+    {
+      name: '谷歌客户数',
+      type: 'bar',
+      data: googleDataClientsFixed,
+      label: {
+        formatter: p => p.value === 0.1 ? '0' : p.value,
+        show: true,
+        position: 'top',
+        fontSize: 11
+      },
+      barWidth: 16,
+      minBarHeight: 5,
+      itemStyle: { color: '#EE6666' }
+    }
+  ],
+  barCategoryGap: '40%'
+});
   </script>
 </body>
 </html>
