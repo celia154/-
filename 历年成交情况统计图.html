@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>全球成交地域分布与业务员分析</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      background: #f8f9fa;
+      font-family: "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+      width: 100vw;
+      overflow-y: auto;
+    }
+    .dashboard-header {
+      background: linear-gradient(120deg, #1a2980, #26d0ce);
+      color: white;
+      padding: 20px 40px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .dashboard-title {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .dashboard-subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    .top-row {
+      display: flex;
+      height: 500px;
+      margin: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    .chart-container {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-left: 1px solid #eee;
+      box-sizing: border-box;
+      padding: 15px 0;
+    }
+    .chart-container:first-child {
+      border-left: none;
+    }
+    .chart-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 15px 0 5px 0;
+      color: #2c3e50;
+    }
+    .chart-subtitle {
+      font-size: 14px;
+      color: #7f8c8d;
+      margin-bottom: 10px;
+    }
+    .chart-box {
+      flex: 1;
+      width: 100%;
+    }
+    .bottom-row {
+      display: flex;
+      flex-direction: column;
+      height: 450px;
+      margin: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      padding: 20px 0;
+    }
+    .combined-chart-container {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .combined-chart-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+    .combined-chart-subtitle {
+      font-size: 14px;
+      color: #7f8c8d;
+      margin-bottom: 20px;
+    }
+    .combined-chart-box {
+      width: 95%;
+      height: 90%;
+    }
+    .ranking-row {
+      display: flex;
+      flex-direction: column;
+      height: 550px;
+      margin: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      padding: 20px 0;
+    }
+    .ranking-chart-container {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ranking-chart-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+    .ranking-chart-subtitle {
+      font-size: 14px;
+      color: #7f8c8d;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-header">
+    <div class="dashboard-title">全球成交地域分布与业务分析</div>
+    <div class="dashboard-subtitle">阿里与谷歌平台数据综合对比 | 2023年-至今</div>
+  </div>
+
+  <div class="top-row">
+    <div class="chart-container" id="containerAli">
+      <div class="chart-title">全球成交地域分布（阿里）</div>
+      <div class="chart-subtitle">数据统计时间：2023年--至今（新老客户去重）</div>
+      <div id="chartAli" class="chart-box"></div>
+    </div>
+
+    <div class="chart-container" id="containerGoogle">
+      <div class="chart-title">全球地域成交分布（谷歌）</div>
+      <div class="chart-subtitle">数据统计时间：2023年--至今（新老客户去重）</div>
+      <div id="chartGoogle" class="chart-box"></div>
+    </div>
+  </div>
+
+  <div class="top-row">
+  <div class="chart-container" id="containerAliCompare">
+    <div class="chart-title">2023-2025年主要国家成交次数对比（阿里）</div>
+    <div class="chart-subtitle">阿里平台数据 | 新老客去重</div>
+    <div id="chartAliCompare" class="chart-box"></div>
+  </div>
+
+  <div class="chart-container" id="containerGoogleCompare">
+    <div class="chart-title">2023-2025年主要国家成交次数对比（谷歌）</div>
+    <div class="chart-subtitle">谷歌平台数据 | 新老客去重</div>
+    <div id="chartGoogleCompare" class="chart-box"></div>
+  </div>
+</div>
+
+  <div class="ranking-row">
+    <div class="ranking-chart-container">
+      <div class="ranking-chart-title">业务员阿里客户数排名</div>
+      <div class="ranking-chart-subtitle">数据统计时间：2023年--至今</div>
+      <div id="chartRanking" style="width: 95%; height: 500px;"></div>
+    </div>
+  </div>
+
+  <script>
+// 这里开始
+function fixZeroData(arr) {
+  return arr.map(v => v === 0 ? 0.1 : v);
+}
+    // 阿里柱状图数据
+    const countriesAli = ["德国", "意大利", "加拿大", "美国", "俄罗斯", "中国"];
+    const dataAli2023 = [10, 9, 9, 7, 7, 6];
+    const dataAli2024 = [0, 2, 3, 5, 3, 15];
+    const dataAli2025 = [0, 2, 0, 3, 4, 5];
+
+    // 谷歌柱状图数据
+    const countriesGoogle = ["美国", "英国", "意大利", "荷兰", "土耳其", "以色列"];
+    const dataGoogle2023 = [9, 5, 4, 3, 3, 3];
+    const dataGoogle2024 = [0, 0, 1, 0, 0, 2];
+    const dataGoogle2025 = [0, 0, 0, 0, 0, 1];
+
+    // 整合阿里和谷歌数据
+    const countries = [...new Set([...countriesAli, ...countriesGoogle])];
+    
+    // 创建映射对象以便快速查找
+    const aliMap = {};
+    countriesAli.forEach((country, i) => {
+      aliMap[country] = {
+        2023: dataAli2023[i],
+        2024: dataAli2024[i],
+        2025: dataAli2025[i]
+      };
+    });
+    
+    const googleMap = {};
+    countriesGoogle.forEach((country, i) => {
+      googleMap[country] = {
+        2023: dataGoogle2023[i],
+        2024: dataGoogle2024[i],
+        2025: dataGoogle2025[i]
+      };
+    });
+    
+    // 准备整合图表数据
+    const combinedData = countries.map(country => {
+      return {
+        country: country,
+        ali2023: aliMap[country]?.[2023] || 0,
+        ali2024: aliMap[country]?.[2024] || 0,
+        ali2025: aliMap[country]?.[2025] || 0,
+        google2023: googleMap[country]?.[2023] || 0,
+        google2024: googleMap[country]?.[2024] || 0,
+        google2025: googleMap[country]?.[2025] || 0
+      };
+    });
+
+    // 旭日图阿里数据
+    const dataAli = [
+      { name:'亚洲', children:[
+        {name:'中国',value:16},{name:'马来西亚',value:7},{name:'泰国',value:6},
+        {name:'印度',value:3},{name:'菲律宾',value:2},{name:'黎巴嫩',value:3},
+        {name:'印度尼西亚',value:3},{name:'以色列',value:2},{name:'巴基斯坦',value:1},
+        {name:'沙特阿拉伯',value:1},{name:'孟加拉',value:1},{name:'阿塞拜疆',value:1},
+        {name:'亚美尼亚',value:1}
+      ]},
+      { name:'欧洲', children:[
+        {name:'法国',value:9},{name:'意大利',value:8},{name:'德国',value:7},
+        {name:'西班牙',value:5},{name:'匈牙利',value:4},{name:'罗马尼亚',value:4},
+        {name:'荷兰',value:4},{name:'保加利亚',value:2},{name:'希腊',value:2},
+        {name:'丹麦',value:1},{name:'马其顿',value:1},{name:'立陶宛',value:1},
+        {name:'奥地利',value:1},{name:'捷克',value:1},{name:'塞浦路斯',value:1},
+        {name:'克罗地亚',value:1},{name:'摩尔多瓦',value:3},{name:'瑞士',value:1},
+        {name:'英国',value:1},{name:'爱沙尼亚',value:1},{name:'瑞典',value:1}
+      ]},
+      { name:'北美洲', children:[
+        {name:'加拿大',value:13},{name:'美国',value:12},
+        {name:'波多黎各',value:3},{name:'墨西哥',value:3},{name:'危地马拉',value:1}
+      ]},
+      { name:'南美洲', children:[
+        {name:'厄瓜多尔',value:1},{name:'委内瑞拉',value:1},
+        {name:'秘鲁',value:1},{name:'巴西',value:2},{name:'智利',value:1}
+      ]},
+      { name:'非洲', children:[
+        {name:'尼日利亚',value:1},{name:'赞比亚',value:1},{name:'南非',value:1}
+      ]},
+      { name:'大洋洲', children:[
+        {name:'澳大利亚',value:3},{name:'新西兰',value:1}
+      ]},
+      { name:'港澳台', children:[
+        {name:'香港（中国）',value:1}
+      ]}
+    ];
+
+    // 旭日图谷歌数据
+    const dataGoogle = [
+      {
+        name: "欧洲",
+        children: [
+          {name:"英国", value:5}, {name:"意大利", value:5}, {name:"法国", value:4},
+          {name:"荷兰", value:3}, {name:"葡萄牙", value:3}, {name:"德国", value:3},
+          {name:"土耳其", value:3}, {name:"希腊", value:3}, {name:"捷克", value:2},
+          {name:"罗马尼亚", value:2}, {name:"匈牙利", value:1}, {name:"波兰", value:1},
+          {name:"比利时", value:1}, {name:"拉脱维亚", value:1}, {name:"瑞士", value:1},
+          {name:"芬兰", value:1}, {name:"西班牙", value:1}
+        ]
+      },
+      {
+        name: "亚洲",
+        children: [
+          {name:"以色列", value:4}, {name:"印度尼西亚", value:4}, {name:"中国", value:3},
+          {name:"马来西亚", value:3}, {name:"香港（中国）", value:1}, {name:"新加坡", value:1},
+          {name:"泰国", value:1}, {name:"伊朗", value:1}, {name:"印度", value:1}, {name:"越南", value:1}
+        ]
+      },
+      {
+        name: "北美洲",
+        children: [
+          {name:"美国", value:9}, {name:"加拿大", value:4}, {name:"巴拿马", value:1}
+        ]
+      },
+      {
+        name: "非洲",
+        children: [
+          {name:"赞比亚", value:1}, {name:"埃塞俄比亚", value:1}, {name:"尼日利亚", value:1}, {name:"毛里求斯", value:1}
+        ]
+      },
+      {
+        name: "南美洲",
+        children: [
+          {name:"哥伦比亚", value:1}, {name:"巴西", value:1}
+        ]
+      },
+      {
+        name: "大洋洲",
+        children: [
+          {name:"澳大利亚", value:1}
+        ]
+      }
+    ];
+
+    const continentColors = {
+      "欧洲":   "#5470C6",
+      "亚洲":   "#91CC75",
+      "北美洲": "#FAC858",
+      "南美洲": "#EE6666",
+      "大洋洲": "#73C0DE",
+      "非洲":   "#3BA272",
+      "港澳台": "#9A60B4"
+    };
+
+    function hexToRgba(hex, a) {
+      const r = parseInt(hex.slice(1,3),16);
+      const g = parseInt(hex.slice(3,5),16);
+      const b = parseInt(hex.slice(5,7),16);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+    function assignColors(data) {
+      data.forEach(cont => {
+        const base = continentColors[cont.name];
+        cont.itemStyle = {color: base};
+        cont.label = {color:'#fff', textBorderColor:base, textBorderWidth:2};
+        cont.children?.forEach((ch,i)=>{
+          const alpha = 0.4 + 0.6*(i+1)/(cont.children.length);
+          ch.itemStyle = {color: hexToRgba(base,alpha)};
+          ch.label = {color:'#fff', textBorderColor:base, textBorderWidth:2};
+        });
+      });
+    }
+
+    function sumValues(n){ 
+      if(!n.children) return n.value||0;
+      let s=0; n.children.forEach(c=>s+=sumValues(c));
+      n.value=s; return s;
+    }
+
+    function formatName(n,v,t){
+      const pct = ((v/t)*100).toFixed(2);
+      return `${n} (${v}次, ${pct}%)`;
+    }
+
+    function formatNames(nodes,t){
+      nodes.forEach(n=>{
+        n.name = formatName(n.name, n.value, t);
+        n.children && formatNames(n.children,t);
+      });
+    }
+
+    function prepareData(data) {
+      data.forEach(sumValues);
+      assignColors(data);
+      const total = data.reduce((a,c)=>a+c.value,0);
+      formatNames(data,total);
+      return {data, total};
+    }
+
+    const aliPrepared = prepareData(dataAli);
+    const googlePrepared = prepareData(dataGoogle);
+
+    const chartAli = echarts.init(document.getElementById('chartAli'));
+    const chartGoogle = echarts.init(document.getElementById('chartGoogle'));
+
+    function getOption(data, total) {
+      return {
+        tooltip:{
+          trigger:'item',
+          formatter:p=>{
+            const name = p.data.name.split(' ')[0];
+            const v = p.data.value;
+            const pct = ((v/total)*100).toFixed(2);
+            return `${name}<br>成交次数：${v}<br>占比：${pct}%`;
+          }
+        },
+        series:[{
+          type:'sunburst',
+          radius:[0,'75%'],
+          center: ['50%', '62%'],
+          sort:null,
+          highlightPolicy:'ancestor',
+          label:{
+            rotate:'radial',
+            fontSize:12,
+            padding:2,
+            color:'#fff',
+            textBorderWidth:2,
+            overflow:'truncate',
+            formatter:params=>{
+              const nm = params.data.name.split(' ')[0];
+              return nm.length>6?nm.slice(0,5)+'…':nm;
+            }
+          },
+          itemStyle:{borderWidth:1,borderColor:'#fff'},
+          data:data
+        }]
+      };
+    }
+
+    chartAli.setOption(getOption(aliPrepared.data, aliPrepared.total));
+    chartGoogle.setOption(getOption(googlePrepared.data, googlePrepared.total));
+
+    // 创建阿里平台柱状图
+const chartAliCompare = echarts.init(document.getElementById('chartAliCompare'));
+chartAliCompare.setOption({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'shadow' }
+  },
+  legend: {
+    data: ['2023', '2024', '2025'],
+    bottom: 0
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '13%',
+    top: '10%',
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    data: countriesAli,
+    axisLabel: { rotate: 30, fontSize: 12 }
+  },
+  yAxis: {
+    type: 'value',
+    name: '成交次数',
+    axisLabel: { fontSize: 12 }
+  },
+ series: [
+  {
+    name: '2023',
+    type: 'bar',
+    data: fixZeroData(dataAli2023),
+    itemStyle: { color: '#5470C6' },
+    label: {
+      show: true,
+      position: 'top',
+      fontSize: 11,
+      formatter: p => p.value === 0.1 ? '0' : p.value
+    },
+    minBarHeight: 5,
+  },
+  {
+    name: '2024',
+    type: 'bar',
+    data: fixZeroData(dataAli2024),
+    itemStyle: { color: '#91CC75' },
+    label: {
+      show: true,
+      position: 'top',
+      fontSize: 11,
+      formatter: p => p.value === 0.1 ? '0' : p.value
+    },
+    minBarHeight: 5,
+  },
+  {
+    name: '2025',
+    type: 'bar',
+    data: fixZeroData(dataAli2025),
+    itemStyle: { color: '#FAC858' },
+    label: {
+      show: true,
+      position: 'top',
+      fontSize: 11,
+      formatter: p => p.value === 0.1 ? '0' : p.value
+    },
+    minBarHeight: 5,
+  }
+]
+
+});
+
+// 创建谷歌平台柱状图
+const chartGoogleCompare = echarts.init(document.getElementById('chartGoogleCompare'));
+chartGoogleCompare.setOption({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'shadow' }
+  },
+  legend: {
+    data: ['2023', '2024', '2025'],
+    bottom: 0
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '13%',
+    top: '10%',
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    data: countriesGoogle,
+    axisLabel: { rotate: 30, fontSize: 12 }
+  },
+  yAxis: {
+    type: 'value',
+    name: '成交次数',
+    axisLabel: { fontSize: 12 }
+  },
+ series: [
+  {
+    name: '2023',
+    type: 'bar',
+    data: fixZeroData(dataGoogle2023),
+    itemStyle: { color: '#EE6666' },
+    label: {
+      show: true,
+      position: 'top',
+      fontSize: 11,
+      formatter: p => p.value === 0.1 ? '0' : p.value
+    },
+    minBarHeight: 5,
+  },
+  {
+    name: '2024',
+    type: 'bar',
+    data: fixZeroData(dataGoogle2024),
+    itemStyle: { color: '#73C0DE' },
+    label: {
+      show: true,
+      position: 'top',
+      fontSize: 11,
+      formatter: p => p.value === 0.1 ? '0' : p.value
+    },
+    minBarHeight: 5,
+  },
+  {
+    name: '2025',
+    type: 'bar',
+    data: fixZeroData(dataGoogle2025),
+    itemStyle: { color: '#9A60B4' },
+    label: {
+      show: true,
+      position: 'top',
+      fontSize: 11,
+      formatter: p => p.value === 0.1 ? '0' : p.value
+    },
+    minBarHeight: 5,
+  }
+]
+
+});
+
+    // 业务员排名图表数据
+    const aliClients = [
+      { name: "田小琴", value: 42 }, { name: "陈敏", value: 22 }, { name: "邹小龙", value: 18 },
+      { name: "李树强", value: 13 }, { name: "朱迪", value: 11 }, { name: "刘晨", value: 10 },
+      { name: "唐铖", value: 10 }, { name: "谭燕红", value: 9 }, { name: "胥敏", value: 8 },
+      { name: "徐辉洪", value: 7 }, { name: "王籍敏", value: 5 }, { name: "李语墠", value: 5 },
+      { name: "李晓强", value: 4 }, { name: "李玲", value: 3 }, { name: "龚娅俪", value: 1 },
+      { name: "刘丽", value: 1 }, { name: "刘莉", value: 1 }, { name: "舒俊", value: 1 },
+      { name: "张瑜", value: 0 }, { name: "张万豪", value: 0 }, { name: "姚永富", value: 0 },
+      { name: "陈蕾", value: 0 }
+    ];
+
+    const googleClients = [
+      { name: "李树强", value: 22 }, { name: "田小琴", value: 11 }, { name: "张瑜", value: 10 },
+      { name: "邹小龙", value: 9 }, { name: "李晓强", value: 6 }, { name: "朱迪", value: 5 },
+      { name: "王籍敏", value: 5 }, { name: "张万豪", value: 4 }, { name: "谭燕红", value: 3 },
+      { name: "唐铖", value: 2 }, { name: "陈敏", value: 2 }, { name: "徐辉洪", value: 1 },
+      { name: "胥敏", value: 1 }, { name: "李玲", value: 1 }, { name: "姚永富", value: 1 },
+      { name: "陈蕾", value: 1 }, { name: "聂森垚", value: 1 }, { name: "李语墠", value: 0 },
+      { name: "刘晨", value: 0 }, { name: "刘丽", value: 0 }, { name: "刘莉", value: 0 },
+      { name: "舒俊", value: 0 }, { name: "龚娅俪", value: 0 }
+    ];
+
+    const allSales = Array.from(new Set([...aliClients.map(d => d.name), ...googleClients.map(d => d.name)]));
+    const aliMapClients = new Map(aliClients.map(d => [d.name, d.value]));
+    const googleMapClients = new Map(googleClients.map(d => [d.name, d.value]));
+    const aliDataClients = allSales.map(name => aliMapClients.get(name) || 0);
+    const googleDataClients = allSales.map(name => googleMapClients.get(name) || 0);
+
+    const chartRanking = echarts.init(document.getElementById('chartRanking'));
+
+    chartRanking.setOption({
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: function(params) {
+          let res = params[0].axisValue + '<br/>';
+          params.forEach(item => {
+            res += `${item.marker} ${item.seriesName}: ${item.value}<br/>`;
+          });
+          return res;
+        }
+      },
+      legend: {
+        data: ['阿里客户数', '谷歌客户数'],
+        bottom: 0
+      },
+      grid: {
+        left: '10%',
+        right: '5%',
+        bottom: '15%',
+        top: '10%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: allSales,
+        axisLabel: {
+          rotate: 30,
+          fontSize: 12
+        }
+      },
+      yAxis: {
+        type: 'value',
+        name: '客户数',
+        axisLabel: { fontSize: 12 }
+      },
+     series: [
+  {
+    name: '阿里客户数',
+    type: 'bar',
+    data: aliDataClients,
+    itemStyle: { color: '#5470C6' },
+    label: { show: true, position: 'top', fontSize: 11 },
+    barWidth: 16
+  },
+  {
+    name: '谷歌客户数',
+    type: 'bar',
+    data: googleDataClients,
+    itemStyle: { color: '#EE6666' },
+    label: { show: true, position: 'top', fontSize: 11 },
+    barWidth: 16
+  }
+],
+barCategoryGap: '40%'
+    });
+  </script>
+</body>
+</html>
